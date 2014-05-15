@@ -23,7 +23,8 @@ class SpaceApi(object):
                       icon = dict(
                           open = None,
                           closed = None),
-                      open = False))
+                      open = False),
+                  issue_report_channels = ['email'])
 
     def __init__(self, config):
         self.status['space'] = config.get('space', 'space')
@@ -34,6 +35,8 @@ class SpaceApi(object):
         self.status['location']['lat'] = config.get('space', 'lat')
         self.status['contact']['email'] = config.get('space', 'email')
         self.status['contact']['ml'] = config.get('space', 'ml')
+        self.status['state']['open'] = config.get('space', 'open')
+        self.status['state']['closed'] = config.get('space', 'closed')
 
         publisher = config.get('zeromq', 'publisher')
 

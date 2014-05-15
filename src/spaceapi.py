@@ -8,7 +8,7 @@ import zmq
 
 class SpaceApi(object):
 
-    status = dict(version = '0.13',
+    status = dict(api = '0.13',
                   space = None,
                   logo = None,
                   url = None,
@@ -31,12 +31,12 @@ class SpaceApi(object):
         self.status['logo'] = config.get('space', 'logo')
         self.status['url'] = config.get('space', 'url')
         self.status['location']['address'] = config.get('space', 'address')
-        self.status['location']['lon'] = config.get('space', 'lon')
-        self.status['location']['lat'] = config.get('space', 'lat')
+        self.status['location']['lon'] = config.getfloat('space', 'lon')
+        self.status['location']['lat'] = config.getfloat('space', 'lat')
         self.status['contact']['email'] = config.get('space', 'email')
         self.status['contact']['ml'] = config.get('space', 'ml')
-        self.status['state']['open'] = config.get('space', 'open')
-        self.status['state']['closed'] = config.get('space', 'closed')
+        self.status['state']['icon']['open'] = config.get('space', 'open')
+        self.status['state']['icon']['closed'] = config.get('space', 'closed')
 
         publisher = config.get('zeromq', 'publisher')
 
@@ -46,6 +46,7 @@ class SpaceApi(object):
     def update(self, spacemessage):
         if 'spaceopen' in spacemessage:
             self.status['state']['open'] = bool(spacemessage['spaceopen'])
+            import pdb; pdb.set_trace()
             with open(os.path.join('htdocs', 'status.json'), 'w') as out:
                 json.dump(self.status, out)
 

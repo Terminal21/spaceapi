@@ -46,7 +46,6 @@ class SpaceApi(object):
     def update(self, spacemessage):
         if 'spaceopen' in spacemessage:
             self.status['state']['open'] = bool(spacemessage['spaceopen'])
-            import pdb; pdb.set_trace()
             with open(os.path.join('htdocs', 'status.json'), 'w') as out:
                 json.dump(self.status, out)
 

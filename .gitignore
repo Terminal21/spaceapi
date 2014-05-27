@@ -1,7 +1,7 @@
 *.py[cod]
 *~
 *.swp
-spacebot.ini
+spaceapi.ini
 
 # C extensions
 *.so

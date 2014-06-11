@@ -71,6 +71,7 @@ class SpaceMessageRecvr(Thread):
         self.subscriber = zcontext.socket(zmq.SUB)
         self.subscriber.connect(publisher)
         self.subscriber.setsockopt(zmq.SUBSCRIBE, '')
+        self.subscriber.setsockopt(zmq.RCVTIMEO, 120000)
 
     def run(self):
         logging.info('starting zeromq subscription')

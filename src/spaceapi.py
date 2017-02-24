@@ -1,14 +1,16 @@
 from ConfigParser import ConfigParser
-from threading import Thread
 import json
-import logging
+import cgi
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+from threading import Thread
 import os
 import time
-import zmq
+import threading
 
 class SpaceApi(object):
 
-    status = dict(api = '0.13',
+    def __init__(self, config):
+    	self.status = dict(api = '0.13',
                   space = None,
                   logo = None,
                   url = None,
@@ -25,8 +27,6 @@ class SpaceApi(object):
                           closed = None),
                       open = False),
                   issue_report_channels = ['email'])
-
-    def __init__(self, config):
         self.status['space'] = config.get('space', 'space')
         self.status['logo'] = config.get('space', 'logo')
         self.status['url'] = config.get('space', 'url')
@@ -37,63 +37,66 @@ class SpaceApi(object):
         self.status['contact']['ml'] = config.get('space', 'ml')
         self.status['state']['icon']['open'] = config.get('space', 'open')
         self.status['state']['icon']['closed'] = config.get('space', 'closed')
+        self.fn = config.get('space', 'filename')
 
-        publisher = config.get('zeromq', 'publisher')
+    def open(self):
+        self.status['state']['open'] = True
+        self.update()
 
-        self.spacemrescvr = SpaceMessageRecvr(self, publisher)
-        self.spacemrescvr.start()
+    def close(self):
+        self.status['state']['open'] = False
+        self.update()
 
-    def update(self, spacemessage):
-        if 'spaceopen' in spacemessage:
-            self.status['state']['open'] = bool(spacemessage['spaceopen'])
-            with open(os.path.join('htdocs', 'status.json'), 'w') as out:
-                json.dump(self.status, out)
-
-    def serve_forever(self):
-        logging.info('SpaceAPI started')
-        while True:
-            time.sleep(600)
-            logging.info('SpaceAPI hartbeat')
+    def update(self):
+        print 'updating'
+        with open(os.path.join('htdocs', self.fn), 'w') as out:
+            json.dump(self.status, out)
 
 
-class SpaceMessageRecvr(Thread):
+class SpaceApiHandler(BaseHTTPRequestHandler):
 
-    _continue = True
+    def do_POST(self):
+        print 'POST' 
+        spaceapi_t21 = SpaceApi(config_t21)
+        spaceapi_ebk = SpaceApi(config_ebk)
+        form = cgi.FieldStorage(
+            fp=self.rfile,
+            headers=self.headers,
+            environ={'REQUEST_METHOD':'POST',
+                     'CONTENT_TYPE':self.headers['Content-Type'],
+                     })
+        status = form.getvalue('status')
+        if 'open' in status:
+            spaceapi_ebk.open()
+            spaceapi_t21.open()
+        else:
+            spaceapi_ebk.close()
+            spaceapi_t21.close()
+        self.respond("""asdf""")
 
-    def __init__(self, listener, publisher):
-        Thread.__init__(self) 
-        self.daemon = True
+    def do_GET(self):
+        self.respond("""geh weg""")
 
-        logging.debug('SpaceMessageRecvr initialized')
-        self.listener = listener
+    def respond(self, response, status=200):
+        self.send_response(status)
+        self.send_header("Content-type", "text/html")
+        self.send_header("Content-length", len(response))
+        self.end_headers()
+        self.wfile.write(response)
 
-        zcontext = zmq.Context()
-        self.subscriber = zcontext.socket(zmq.SUB)
-        self.subscriber.connect(publisher)
-        self.subscriber.setsockopt(zmq.SUBSCRIBE, '')
-        self.subscriber.setsockopt(zmq.RCVTIMEO, 120000)
 
-    def run(self):
-        logging.info('starting zeromq subscription')
-        while self._continue:
-            try:
-                message = self.subscriber.recv_json()
-                logging.info('receving zeromq message {}'.format(str(message)))
-                self.listener.update(message)
-            except Exception as e:
-                logging.error(e)
+config_t21 = ConfigParser()
+config_t21.read('etc/spaceapi.ini')
+config_ebk = ConfigParser()
+config_ebk.read('etc/spaceapi_ebk.ini')
 
-    def stop(self):
-        self.__continue = False
-        self.subscriber.close()
-        logging.info('stopping zeromq subscription')
 
 def run():
-    logformat = "%(asctime)s %(levelname)s [%(name)s][%(threadName)s] %(message)s"
-    logging.basicConfig(format=logformat, level=logging.DEBUG)
+    server = HTTPServer(('', 8888), SpaceApiHandler)
+    thread = threading.Thread(target=server.serve_forever)
+    thread.daemon = True
+    thread.start()
+    while 1:
+        pass
+        time.sleep(1)
 
-    config = ConfigParser()
-    config.read('etc/spaceapi.ini')
-
-    spaceapi = SpaceApi(config)
-    spaceapi.serve_forever()

@@ -7,6 +7,20 @@ import os
 import time
 import threading
 
+
+def telnet(txt):
+    try:
+        telnet = telnetlib.Telnet('192.168.21.148')
+    except:
+        logging.error('Cannot connect to display, make sure it is on the '
+                      'network with IP 192.168.21.148')
+        return
+    telnet.write('\n\n'.encode('latin1'))
+    telnet.write(chr(0x10).encode('latin1'))
+    telnet.write(chr(0).encode('latin1'))
+    telnet.write(txt.encode('latin1'))
+
+
 class SpaceApi(object):
 
     def __init__(self, config):
@@ -39,6 +53,7 @@ class SpaceApi(object):
         self.status['state']['icon']['closed'] = config.get('space', 'closed')
         self.fn = config.get('space', 'filename')
 
+
     def open(self):
         self.status['state']['open'] = True
         self.update()
@@ -67,9 +82,11 @@ class SpaceApiHandler(BaseHTTPRequestHandler):
                      })
         status = form.getvalue('status')
         if 'open' in status:
+            telnet('SPACE OPEN')
             spaceapi_ebk.open()
             spaceapi_t21.open()
         else:
+            telnet('SPACE CLOSED')
             spaceapi_ebk.close()
             spaceapi_t21.close()
         self.respond("""asdf""")

@@ -6,13 +6,13 @@ from threading import Thread
 import os
 import time
 import threading
-
+import telnetlib
 
 def telnet(txt):
     try:
         telnet = telnetlib.Telnet('192.168.21.148')
     except:
-        logging.error('Cannot connect to display, make sure it is on the '
+        print('Cannot connect to display, make sure it is on the '
                       'network with IP 192.168.21.148')
         return
     telnet.write('\n\n'.encode('latin1'))

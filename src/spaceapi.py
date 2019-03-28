@@ -7,6 +7,7 @@ import os
 import time
 import threading
 import telnetlib
+import paho.mqtt.client as mqtt
 
 def telnet(txt):
     try:
@@ -67,28 +68,20 @@ class SpaceApi(object):
         with open(os.path.join('htdocs', self.fn), 'w') as out:
             json.dump(self.status, out)
 
+config_t21 = ConfigParser()
+config_t21.read('etc/spaceapi.ini')
+config_ebk = ConfigParser()
+config_ebk.read('etc/spaceapi_ebk.ini')
+
+T21 = SpaceApi(config_t21)
+EBK = SpaceApi(config_ebk)
+
 
 class SpaceApiHandler(BaseHTTPRequestHandler):
+    """currently no-op, can go away if spacemaster doesnt send http requests anymore"""
+
 
     def do_POST(self):
-        print 'POST' 
-        spaceapi_t21 = SpaceApi(config_t21)
-        spaceapi_ebk = SpaceApi(config_ebk)
-        form = cgi.FieldStorage(
-            fp=self.rfile,
-            headers=self.headers,
-            environ={'REQUEST_METHOD':'POST',
-                     'CONTENT_TYPE':self.headers['Content-Type'],
-                     })
-        status = form.getvalue('status')
-        if 'open' in status:
-            telnet('SPACE OPEN')
-            spaceapi_ebk.open()
-            spaceapi_t21.open()
-        else:
-            telnet('SPACE CLOSED')
-            spaceapi_ebk.close()
-            spaceapi_t21.close()
         self.respond("""asdf""")
 
     def do_GET(self):
@@ -102,10 +95,27 @@ class SpaceApiHandler(BaseHTTPRequestHandler):
         self.wfile.write(response)
 
 
-config_t21 = ConfigParser()
-config_t21.read('etc/spaceapi.ini')
-config_ebk = ConfigParser()
-config_ebk.read('etc/spaceapi_ebk.ini')
+def get_last_pl():
+    with open('.lastpl', 'r') as last_pl:
+        return last_pl.read().strip()
+
+def set_last_pl(pl):
+    with open('.lastpl', 'w') as last_pl:
+        last_pl.write(pl)
+
+def mqtt_received(client, data, message):
+    payload = message.payload.decode('utf8')
+    if payload == get_last_pl():
+        return
+    if payload == 'true':
+        T21.open()
+        EBK.open()
+        telnet('SPACE OPEN')
+    elif payload == 'false':
+        T21.close()
+        EBK.close()
+        telnet('SPACE CLOSED')
+    set_last_pl(payload)
 
 
 def run():
@@ -113,6 +123,12 @@ def run():
     thread = threading.Thread(target=server.serve_forever)
     thread.daemon = True
     thread.start()
+    mqttc = mqtt.Client()
+    mqttc.connect('localhost')
+    time.sleep(1)
+    mqttc.subscribe('space/status/open')
+    mqttc.on_message = mqtt_received
+    mqttc.loop_start()
     while 1:
         pass
         time.sleep(1)

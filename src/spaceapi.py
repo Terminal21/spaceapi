@@ -1,11 +1,7 @@
 from ConfigParser import ConfigParser
 import json
-import cgi
-from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-from threading import Thread
 import os
 import time
-import threading
 import telnetlib
 import paho.mqtt.client as mqtt
 
@@ -77,24 +73,6 @@ T21 = SpaceApi(config_t21)
 EBK = SpaceApi(config_ebk)
 
 
-class SpaceApiHandler(BaseHTTPRequestHandler):
-    """currently no-op, can go away if spacemaster doesnt send http requests anymore"""
-
-
-    def do_POST(self):
-        self.respond("""asdf""")
-
-    def do_GET(self):
-        self.respond("""geh weg""")
-
-    def respond(self, response, status=200):
-        self.send_response(status)
-        self.send_header("Content-type", "text/html")
-        self.send_header("Content-length", len(response))
-        self.end_headers()
-        self.wfile.write(response)
-
-
 def get_last_pl():
     with open('.lastpl', 'r') as last_pl:
         return last_pl.read().strip()
@@ -119,10 +97,6 @@ def mqtt_received(client, data, message):
 
 
 def run():
-    server = HTTPServer(('', 8888), SpaceApiHandler)
-    thread = threading.Thread(target=server.serve_forever)
-    thread.daemon = True
-    thread.start()
     mqttc = mqtt.Client()
     mqttc.connect('localhost')
     time.sleep(1)

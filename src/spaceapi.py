@@ -29,6 +29,14 @@ class SpaceApi(object):
                       address = None,
                       lon = None,
                       lat = None),
+                  feeds = dict(
+                      calendar = dict(
+                          type='ical',
+                          url='https://kalender.eigenbaukombinat.de/public/public.ics'),
+                      blog = dict(
+                          type='rss',
+                          url='https://eigenbaukombinat.de/feed/'),
+                      ),
                   contact = dict(
                       email = None,
                       ml = None),
